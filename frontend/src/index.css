@@ -1,0 +1,23 @@
+@tailwind base;@tailwind components;@tailwind utilities;
+@layer base { body{@apply bg-sand text-ink antialiased;} button,input,select,textarea{@apply focus:outline-none focus:ring-2 focus:ring-coral/30;} }
+@layer components { .card{@apply rounded-2xl border border-slate-200/80 bg-white shadow-sm;} .btn{@apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;} .btn-primary{@apply btn bg-ink text-white hover:bg-slate-700;} .btn-secondary{@apply btn border border-slate-200 bg-white hover:bg-slate-50;} .field{@apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm placeholder:text-slate-400;} .label{@apply mb-1.5 block text-sm font-medium text-slate-700;} }
+@media (max-width: 640px) {
+  body { font-size: 15px; }
+  main { min-width: 0; }
+  .card { border-radius: 1rem; }
+  .btn { min-height: 44px; padding: .7rem .9rem; font-size: .9rem; }
+  .field { min-height: 44px; padding: .7rem .8rem; font-size: 1rem; }
+  .label { font-size: .9rem; }
+  h1 { font-size: 1.65rem !important; line-height: 1.2; }
+  h2 { font-size: 1.1rem; }
+  table { font-size: .875rem; }
+  input[type="number"] { font-size: 1rem; }
+}
+@media print {
+  body:has(#print-invoice) { background: white !important; }
+  body:has(#print-invoice) .min-h-screen > aside,
+  body:has(#print-invoice) header,
+  body:has(#print-invoice) .print-hide { display: none !important; }
+  body:has(#print-invoice) main { width: 100% !important; }
+  #print-invoice { max-width: none !important; border: 0 !important; box-shadow: none !important; }
+}

@@ -1,0 +1,6 @@
+.git
+.cache
+tmp
+bin
+coverage.out
+*.log

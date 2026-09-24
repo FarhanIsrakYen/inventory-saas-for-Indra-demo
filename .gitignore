@@ -1,0 +1,36 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Go
+bin/
+*.exe
+*.test
+*.out
+vendor/
+
+# Frontend dependencies and build output
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/*.tsbuildinfo
+
+# Local caches and runtime data
+.cache/
+tmp/
+temp/
+*.log
+
+# Docker/local database data
+postgres_data/
+es_data/
+
+# Editors and operating systems
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
