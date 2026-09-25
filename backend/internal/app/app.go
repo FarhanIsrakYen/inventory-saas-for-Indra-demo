@@ -13,14 +13,20 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type API struct {
-	db     *gorm.DB
-	secret []byte
-	log    *slog.Logger
+	db             *gorm.DB
+	secret         []byte
+	log            *slog.Logger
+	elasticEnabled bool
+	elasticURL     string
+	elasticClient  *http.Client
+	courier        *CourierService
+	orderService   *OrderService
 }
 type Claims struct {
 	UserID   string `json:"userId"`
@@ -34,16 +40,30 @@ func env(k, d string) string {
 	}
 	return d
 }
+func envBool(k string, d bool) bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv(k)))
+	if v == "" {
+		return d
+	}
+	return v == "1" || v == "true" || v == "yes" || v == "on"
+}
 func Run() {
 	dsn := env("DATABASE_URL", "postgres://stockpilot:stockpilot_dev@localhost:5432/stockpilot?sslmode=disable")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Warn)})
 	if err != nil {
 		panic(err)
 	}
-	if err = db.AutoMigrate(&Tenant{}, &User{}, &Role{}, &TenantUser{}, &RefreshToken{}, &Product{}, &Variant{}, &ProductImage{}, &InventoryTransaction{}, &DeliveryOption{}, &Order{}, &OrderItem{}, &AuditLog{}); err != nil {
+	if err = db.AutoMigrate(&Tenant{}, &User{}, &Role{}, &TenantUser{}, &RefreshToken{}, &Product{}, &Variant{}, &ProductImage{}, &InventoryTransaction{}, &DeliveryOption{}, &Order{}, &OrderItem{}, &Shipment{}, &AuditLog{}); err != nil {
 		panic(err)
 	}
-	api := &API{db: db, secret: []byte(env("JWT_SECRET", "development-secret-change-me-32-chars")), log: slog.Default()}
+	api := &API{db: db, secret: []byte(env("JWT_SECRET", "development-secret-change-me-32-chars")), log: slog.Default(), elasticEnabled: envBool("ELASTICSEARCH_ENABLED", false), elasticURL: strings.TrimRight(env("ELASTICSEARCH_URL", "http://localhost:9200"), "/"), elasticClient: &http.Client{Timeout: 5 * time.Second}}
+	pathaoStoreID, _ := strconv.Atoi(env("PATHAO_STORE_ID", "0"))
+	pathao := NewPathaoProvider(PathaoConfig{BaseURL: env("PATHAO_BASE_URL", "https://courier-api-sandbox.pathao.com"), ClientID: os.Getenv("PATHAO_CLIENT_ID"), ClientSecret: os.Getenv("PATHAO_CLIENT_SECRET"), Username: os.Getenv("PATHAO_USERNAME"), Password: os.Getenv("PATHAO_PASSWORD"), StoreID: pathaoStoreID}, &http.Client{Timeout: 20 * time.Second})
+	api.courier = NewCourierService(pathao)
+	api.orderService = NewOrderService(db, api.courier)
+	if api.elasticEnabled {
+		go api.rebuildProductIndex()
+	}
 	r := api.routes()
 	r.Run(":" + env("PORT", "8080"))
 }
@@ -73,6 +93,8 @@ func (a *API) routes() *gin.Engine {
 	p.GET("/orders", a.listOrders)
 	p.POST("/orders", a.require("orders.create"), a.createOrder)
 	p.GET("/orders/:id", a.order)
+	p.GET("/orders/:id/courier/pathao", a.getPathaoOrder)
+	p.POST("/orders/:id/courier/pathao", a.require("orders.update"), a.createPathaoOrder)
 	p.PUT("/orders/:id", a.require("orders.update"), a.updateOrder)
 	p.PUT("/orders/:id/status", a.require("orders.update"), a.updateOrderStatus)
 	p.DELETE("/orders/:id", a.require("orders.cancel"), a.deleteOrder)

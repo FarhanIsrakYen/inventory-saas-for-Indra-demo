@@ -118,15 +118,27 @@ type Order struct {
 }
 type OrderItem struct {
 	Base
-	TenantID    uuid.UUID `gorm:"type:uuid;index" json:"-"`
-	OrderID     uuid.UUID `gorm:"type:uuid;index" json:"orderId"`
-	VariantID   uuid.UUID `gorm:"type:uuid" json:"variantId"`
-	ProductName string    `json:"productName"`
-	VariantName string    `json:"variantName"`
-	ProductImageURL string `json:"productImageUrl"`
-	Quantity    int       `json:"quantity"`
-	UnitPrice   int64     `json:"unitPrice"`
-	Subtotal    int64     `json:"subtotal"`
+	TenantID        uuid.UUID `gorm:"type:uuid;index" json:"-"`
+	OrderID         uuid.UUID `gorm:"type:uuid;index" json:"orderId"`
+	VariantID       uuid.UUID `gorm:"type:uuid" json:"variantId"`
+	ProductName     string    `json:"productName"`
+	VariantName     string    `json:"variantName"`
+	ProductImageURL string    `json:"productImageUrl"`
+	Quantity        int       `json:"quantity"`
+	UnitPrice       int64     `json:"unitPrice"`
+	Subtotal        int64     `json:"subtotal"`
+}
+type Shipment struct {
+	Base
+	TenantID        uuid.UUID `gorm:"type:uuid;index;uniqueIndex:idx_shipment_tenant_order_provider" json:"-"`
+	OrderID         uuid.UUID `gorm:"type:uuid;index;uniqueIndex:idx_shipment_tenant_order_provider" json:"orderId"`
+	Provider        string    `gorm:"uniqueIndex:idx_shipment_tenant_order_provider" json:"provider"`
+	ProviderOrderID string    `json:"providerOrderId"`
+	TrackingNumber  string    `json:"trackingNumber"`
+	Status          string    `json:"status"`
+	DeliveryFee     int64     `json:"deliveryFee"`
+	RequestPayload  string    `json:"-"`
+	ResponsePayload string    `json:"-"`
 }
 type AuditLog struct {
 	Base

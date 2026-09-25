@@ -30,6 +30,13 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgres://stockpilot:stockpilot_dev@postgres:5432/stockpilot?sslmode=disable}
       ELASTICSEARCH_URL: ${ELASTICSEARCH_URL:-http://elasticsearch:9200}
+      ELASTICSEARCH_ENABLED: ${ELASTICSEARCH_ENABLED:-false}
+      PATHAO_BASE_URL: ${PATHAO_BASE_URL:-https://courier-api-sandbox.pathao.com}
+      PATHAO_CLIENT_ID: ${PATHAO_CLIENT_ID:-}
+      PATHAO_CLIENT_SECRET: ${PATHAO_CLIENT_SECRET:-}
+      PATHAO_USERNAME: ${PATHAO_USERNAME:-}
+      PATHAO_PASSWORD: ${PATHAO_PASSWORD:-}
+      PATHAO_STORE_ID: ${PATHAO_STORE_ID:-0}
       JWT_SECRET: ${JWT_SECRET:-development-secret-change-me-32-chars}
       PORT: "8080"
     ports: ["8080:8080"]

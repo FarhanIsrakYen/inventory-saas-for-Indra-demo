@@ -221,7 +221,21 @@ func (a *API) listProducts(c *gin.Context) {
 	q := a.db.Where("tenant_id=?", t).Preload("Variants.Images").Preload("Images")
 	s := c.Query("search")
 	if s != "" {
-		q = q.Where("name ILIKE ? OR sku ILIKE ?", "%"+s+"%", "%"+s+"%")
+		if a.elasticEnabled {
+			ids, err := a.searchProductIDs(c.Request.Context(), t, s)
+			if err == nil {
+				if len(ids) == 0 {
+					ok(c, gin.H{"items": []Product{}, "page": 1, "size": 20, "total": 0})
+					return
+				}
+				q = q.Where("products.id IN ?", ids)
+			} else {
+				a.log.Warn("elasticsearch search failed; using database search", "error", err)
+				q = q.Where("name ILIKE ? OR sku ILIKE ?", "%"+s+"%", "%"+s+"%")
+			}
+		} else {
+			q = q.Where("name ILIKE ? OR sku ILIKE ?", "%"+s+"%", "%"+s+"%")
+		}
 	}
 	if c.Query("stock") == "out" {
 		q = q.Joins("JOIN product_variants ON product_variants.product_id = products.id").Where("product_variants.quantity = 0").Group("products.id")
@@ -273,6 +287,7 @@ func (a *API) createProduct(c *gin.Context) {
 	}
 	tx.Commit()
 	a.audit(t, u, "product.created", "product", p.ID.String())
+	a.indexProduct(p.ID, t)
 	a.productResponse(c, p.ID, t)
 }
 func choosePrice(v, d int64) int64 {
@@ -365,6 +380,7 @@ func (a *API) updateProduct(c *gin.Context) {
 		}
 	}
 	a.audit(t, u, "product.updated", "product", id.String())
+	a.indexProduct(id, t)
 	a.productResponse(c, id, t)
 }
 func (a *API) deleteProduct(c *gin.Context) {
@@ -374,6 +390,7 @@ func (a *API) deleteProduct(c *gin.Context) {
 		fail(c, 404, "PRODUCT_NOT_FOUND", "Product not found")
 		return
 	}
+	a.deleteProductIndex(c.Request.Context(), id)
 	a.audit(t, u, "product.deleted", "product", id.String())
 	c.Status(204)
 }
