@@ -38,6 +38,7 @@ services:
       PATHAO_PASSWORD: ${PATHAO_PASSWORD:-}
       PATHAO_STORE_ID: ${PATHAO_STORE_ID:-0}
       JWT_SECRET: ${JWT_SECRET:-development-secret-change-me-32-chars}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
       PORT: "8080"
     ports: ["8080:8080"]
     depends_on:

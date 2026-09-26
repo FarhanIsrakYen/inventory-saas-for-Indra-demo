@@ -47,6 +47,23 @@ func envBool(k string, d bool) bool {
 	}
 	return v == "1" || v == "true" || v == "yes" || v == "on"
 }
+func envList(k string, d []string) []string {
+	v := strings.TrimSpace(os.Getenv(k))
+	if v == "" {
+		return d
+	}
+	parts := strings.Split(v, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if value := strings.TrimSpace(part); value != "" {
+			out = append(out, value)
+		}
+	}
+	if len(out) == 0 {
+		return d
+	}
+	return out
+}
 func Run() {
 	dsn := env("DATABASE_URL", "postgres://stockpilot:stockpilot_dev@localhost:5432/stockpilot?sslmode=disable")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Default.LogMode(logger.Warn)})
@@ -69,7 +86,7 @@ func Run() {
 }
 func (a *API) routes() *gin.Engine {
 	r := gin.New()
-	r.Use(gin.Recovery(), requestLog(a.log), cors.New(cors.Config{AllowOrigins: []string{"http://localhost:5173"}, AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, AllowHeaders: []string{"Authorization", "Content-Type"}, AllowCredentials: true}))
+	r.Use(gin.Recovery(), requestLog(a.log), cors.New(cors.Config{AllowOrigins: envList("CORS_ORIGINS", []string{"http://localhost:5173"}), AllowMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}, AllowHeaders: []string{"Authorization", "Content-Type"}, AllowCredentials: true}))
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 	api := r.Group("/api")
 	auth := api.Group("/auth")
