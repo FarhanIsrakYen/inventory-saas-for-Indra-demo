@@ -83,11 +83,13 @@ func (a *API) routes() *gin.Engine {
 	p.POST("/tenants/switch", a.switchTenant)
 	p.GET("/dashboard", a.dashboard)
 	p.GET("/products", a.listProducts)
+	p.GET("/products/export", a.exportProducts)
 	p.POST("/products", a.require("products.create"), a.createProduct)
 	p.POST("/products/import/1688", a.require("products.create"), a.import1688)
 	p.GET("/products/:id", a.product)
 	p.PUT("/products/:id", a.require("products.update"), a.updateProduct)
 	p.DELETE("/products/:id", a.require("products.delete"), a.deleteProduct)
+	p.DELETE("/variants/:id", a.require("products.update"), a.deleteVariant)
 	p.POST("/inventory/adjustments", a.require("inventory.adjust"), a.adjustStock)
 	p.GET("/inventory/transactions", a.listTransactions)
 	p.GET("/orders", a.listOrders)
@@ -102,6 +104,8 @@ func (a *API) routes() *gin.Engine {
 	p.POST("/delivery-options", a.require("settings.update"), a.createDelivery)
 	p.PUT("/delivery-options/:id", a.require("settings.update"), a.updateDelivery)
 	p.DELETE("/delivery-options/:id", a.require("settings.update"), a.deleteDelivery)
+	p.PUT("/settings/shop", a.require("settings.update"), a.updateShop)
+	p.PUT("/settings/password", a.require("settings.update"), a.updatePassword)
 	p.GET("/audit-logs", a.require("settings.read"), a.auditLogs)
 	return r
 }

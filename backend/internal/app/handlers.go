@@ -145,6 +145,59 @@ func (a *API) me(c *gin.Context) {
 	a.db.First(&tenant, t)
 	ok(c, gin.H{"user": user, "tenant": tenant})
 }
+
+type updateShopInput struct {
+	Name string `json:"name" binding:"required,min=2"`
+}
+
+func (a *API) updateShop(c *gin.Context) {
+	_, tenantID := ids(c)
+	var in updateShopInput
+	if c.ShouldBindJSON(&in) != nil {
+		fail(c, 400, "VALIDATION_ERROR", "Shop name must be at least 2 characters")
+		return
+	}
+	var tenant Tenant
+	if a.db.Where("id=?", tenantID).First(&tenant).Error != nil {
+		fail(c, 404, "WORKSPACE_NOT_FOUND", "Workspace not found")
+		return
+	}
+	tenant.Name = strings.TrimSpace(in.Name)
+	if tenant.Name == "" || len(tenant.Name) < 2 || a.db.Save(&tenant).Error != nil {
+		fail(c, 400, "VALIDATION_ERROR", "Shop name must be at least 2 characters")
+		return
+	}
+	ok(c, tenant)
+}
+
+type updatePasswordInput struct {
+	CurrentPassword string `json:"currentPassword" binding:"required"`
+	NewPassword     string `json:"newPassword" binding:"required,min=8"`
+}
+
+func (a *API) updatePassword(c *gin.Context) {
+	userID, _ := ids(c)
+	var in updatePasswordInput
+	if c.ShouldBindJSON(&in) != nil {
+		fail(c, 400, "VALIDATION_ERROR", "New password must be at least 8 characters")
+		return
+	}
+	var user User
+	if a.db.First(&user, userID).Error != nil || bcryptCompare(user.PasswordHash, in.CurrentPassword) != nil {
+		fail(c, 400, "INVALID_PASSWORD", "Current password is incorrect")
+		return
+	}
+	password, err := hash(in.NewPassword)
+	if err != nil {
+		fail(c, 500, "PASSWORD_UPDATE_FAILED", "Unable to update password")
+		return
+	}
+	if a.db.Model(&User{}).Where("id=?", userID).Update("password_hash", password).Error != nil {
+		fail(c, 500, "PASSWORD_UPDATE_FAILED", "Unable to update password")
+		return
+	}
+	ok(c, gin.H{"message": "Password updated successfully"})
+}
 func (a *API) tenants(c *gin.Context) {
 	u, _ := ids(c)
 	var m []TenantUser
@@ -248,6 +301,20 @@ func (a *API) listProducts(c *gin.Context) {
 	page, size := pageArgs(c)
 	q.Order("created_at DESC").Offset((page - 1) * size).Limit(size).Find(&items)
 	ok(c, gin.H{"items": items, "page": page, "size": size, "total": count})
+}
+
+func (a *API) exportProducts(c *gin.Context) {
+	_, tenantID := ids(c)
+	var items []Product
+	if err := a.db.Where("tenant_id=?", tenantID).
+		Preload("Images").
+		Preload("Variants").
+		Preload("Variants.Images").
+		Order("created_at DESC").Find(&items).Error; err != nil {
+		fail(c, 500, "EXPORT_ERROR", "Unable to export products")
+		return
+	}
+	ok(c, items)
 }
 func pageArgs(c *gin.Context) (int, int) {
 	p, z := 1, 20
@@ -386,12 +453,45 @@ func (a *API) updateProduct(c *gin.Context) {
 func (a *API) deleteProduct(c *gin.Context) {
 	u, t := ids(c)
 	id, e := uuid.Parse(c.Param("id"))
-	if e != nil || a.db.Where("id=? AND tenant_id=?", id, t).Delete(&Product{}).RowsAffected == 0 {
+	if e != nil {
 		fail(c, 404, "PRODUCT_NOT_FOUND", "Product not found")
 		return
 	}
+	var product Product
+	if a.db.Where("id=? AND tenant_id=?", id, t).First(&product).Error != nil {
+		fail(c, 404, "PRODUCT_NOT_FOUND", "Product not found")
+		return
+	}
+	var variants []Variant
+	a.db.Where("product_id=? AND tenant_id=?", id, t).Find(&variants)
+	for _, variant := range variants {
+		a.db.Where("owner_id=? AND owner_type=? AND tenant_id=?", variant.ID, "variants", t).Delete(&ProductImage{})
+	}
+	a.db.Where("owner_id=? AND owner_type=? AND tenant_id=?", id, "products", t).Delete(&ProductImage{})
+	a.db.Where("product_id=? AND tenant_id=?", id, t).Delete(&Variant{})
+	a.db.Delete(&product)
 	a.deleteProductIndex(c.Request.Context(), id)
 	a.audit(t, u, "product.deleted", "product", id.String())
+	c.Status(204)
+}
+
+func (a *API) deleteVariant(c *gin.Context) {
+	u, tenantID := ids(c)
+	productID, productErr := uuid.Parse(c.Query("productId"))
+	variantID, variantErr := uuid.Parse(c.Param("id"))
+	if productErr != nil || variantErr != nil {
+		fail(c, 404, "VARIANT_NOT_FOUND", "Variant not found")
+		return
+	}
+	var variant Variant
+	if a.db.Where("id=? AND product_id=? AND tenant_id=?", variantID, productID, tenantID).First(&variant).Error != nil {
+		fail(c, 404, "VARIANT_NOT_FOUND", "Variant not found")
+		return
+	}
+	a.db.Where("owner_id=? AND owner_type=? AND tenant_id=?", variantID, "variants", tenantID).Delete(&ProductImage{})
+	a.db.Where("id=? AND tenant_id=?", variantID, tenantID).Delete(&Variant{})
+	a.audit(tenantID, u, "variant.deleted", "variant", variantID.String())
+	a.indexProduct(productID, tenantID)
 	c.Status(204)
 }
 func (a *API) import1688(c *gin.Context) {
