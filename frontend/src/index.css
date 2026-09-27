@@ -1,17 +1,47 @@
 @tailwind base;@tailwind components;@tailwind utilities;
 @layer base { body{@apply bg-sand text-ink antialiased;} button,input,select,textarea{@apply focus:outline-none focus:ring-2 focus:ring-coral/30;} }
 @layer components { .card{@apply rounded-2xl border border-slate-200/80 bg-white shadow-sm;} .btn{@apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;} .btn-primary{@apply btn bg-ink text-white hover:bg-slate-700;} .btn-secondary{@apply btn border border-slate-200 bg-white hover:bg-slate-50;} .field{@apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm placeholder:text-slate-400;} .label{@apply mb-1.5 block text-sm font-medium text-slate-700;} }
-@media (max-width: 640px) {
-  body { font-size: 15px; }
+html, body, #root { max-width: 100%; overflow-x: hidden; }
+@media (max-width: 767px) {
+  body { font-size: 16px; }
   main { min-width: 0; }
+  main > div { padding: 1rem !important; padding-bottom: 5.75rem !important; }
+  header { height: 4rem !important; padding-left: 1rem !important; padding-right: 1rem !important; }
+  header::before { content: 'S'; display: grid; width: 2rem; height: 2rem; place-items: center; border-radius: .65rem; background: #f05a47; color: white; font-weight: 900; }
+  header > button:first-child { display: none; }
   .card { border-radius: 1rem; }
+  .card { box-shadow: 0 1px 3px rgb(15 23 42 / 0.06); }
   .btn { min-height: 44px; padding: .7rem .9rem; font-size: .9rem; }
   .field { min-height: 44px; padding: .7rem .8rem; font-size: 1rem; }
   .label { font-size: .9rem; }
-  h1 { font-size: 1.65rem !important; line-height: 1.2; }
+  h1 { font-size: 1.5rem !important; line-height: 1.2; }
   h2 { font-size: 1.1rem; }
   table { font-size: .875rem; }
   input[type="number"] { font-size: 1rem; }
+  .grid { min-width: 0; }
+  .grid > * { min-width: 0; }
+  .overflow-x-auto { max-width: 100%; -webkit-overflow-scrolling: touch; }
+  .min-h-screen > aside { top: auto !important; bottom: 0 !important; left: 0 !important; right: 0 !important; width: 100% !important; height: 4.5rem !important; padding: 0 !important; transform: translateX(0) !important; }
+  .min-h-screen > aside > div:first-child, .min-h-screen > aside > div:last-child { display: none !important; }
+  .min-h-screen > aside nav { display: flex; height: 100%; align-items: stretch; justify-content: space-around; gap: 0; }
+  .min-h-screen > aside nav a { flex: 1; flex-direction: column; justify-content: center; gap: .2rem; border-radius: 0; padding: .35rem .2rem; font-size: .7rem; }
+  .min-h-screen > aside nav a svg { width: 20px; height: 20px; }
+  .min-h-screen > aside nav a:first-child, .min-h-screen > aside nav a:last-child { font-size: 0; }
+  .min-h-screen > aside nav a:first-child::after { content: 'Home'; font-size: .7rem; }
+  .min-h-screen > aside nav a:last-child::after { content: 'More'; font-size: .7rem; }
+  .min-h-screen > aside + button { display: none !important; }
+  main { padding-bottom: 0 !important; }
+  main > div > .mb-7 { margin-bottom: 1.25rem; }
+  main > div > .mb-7 > .btn-primary { width: 100%; }
+  main > div > .grid.gap-4.sm\:grid-cols-2.xl\:grid-cols-5::before { content: 'Dashboard'; grid-column: 1 / -1; font-size: 1.5rem; line-height: 1.2; font-weight: 700; margin-bottom: .25rem; }
+  main > div > .grid.gap-4.sm\:grid-cols-2.xl\:grid-cols-5 > .card:nth-child(n+3) { display: none; }
+  .sticky { position: sticky; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  main > div { padding: 1.5rem !important; }
+  .card { border-radius: 1rem; }
+  .grid { min-width: 0; }
+  .grid > * { min-width: 0; }
 }
 @media print {
   body:has(#print-invoice) { background: white !important; }

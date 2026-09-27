@@ -77,7 +77,7 @@ func (a *API) listOrders(c *gin.Context) {
 	var n int64
 	q.Model(&Order{}).Count(&n)
 	p, s := pageArgs(c)
-	q.Order("created_at desc").Offset((p - 1) * s).Limit(s).Find(&x)
+	q.Order("created_at desc, id desc").Offset((p - 1) * s).Limit(s).Find(&x)
 	ok(c, gin.H{"items": x, "total": n, "page": p, "size": s})
 }
 
