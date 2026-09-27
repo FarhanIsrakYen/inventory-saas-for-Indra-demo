@@ -13,17 +13,15 @@ func (a *API) dashboard(c *gin.Context) {
 	_, t := ids(c)
 	var products, inventory, low, orders int64
 	var revenue int64
-	var lowProducts []Product
-	a.db.Where("tenant_id=?", t).Preload("Variants", "quantity < ?", 5).Where("id IN (SELECT product_id FROM product_variants WHERE tenant_id=? AND quantity < ?)", t, 5).Limit(8).Find(&lowProducts)
 	a.db.Model(&Product{}).Where("tenant_id=?", t).Count(&products)
 	a.db.Model(&Variant{}).Where("tenant_id=?", t).Select("COALESCE(SUM(quantity),0)").Scan(&inventory)
 	a.db.Model(&Variant{}).Where("tenant_id=? AND quantity < ?", t, 5).Count(&low)
 	today := time.Now().Truncate(24 * time.Hour)
 	a.db.Model(&Order{}).Where("tenant_id=? AND created_at >= ?", t, today).Count(&orders)
-	a.db.Model(&Order{}).Where("tenant_id=? AND created_at >= ? AND status != ?", t, today, "Cancelled").Select("COALESCE(SUM(total),0)").Scan(&revenue)
+	a.db.Model(&Order{}).Where("tenant_id=? AND status != ?", t, "Cancelled").Select("COALESCE(SUM(subtotal),0)").Scan(&revenue)
 	var recent []Order
 	a.db.Where("tenant_id=?", t).Order("created_at desc").Limit(5).Find(&recent)
-	ok(c, gin.H{"totalProducts": products, "totalInventory": inventory, "lowStock": low, "lowStockProducts": lowProducts, "todayOrders": orders, "todayRevenue": revenue, "recentOrders": recent})
+	ok(c, gin.H{"totalProducts": products, "totalInventory": inventory, "lowStock": low, "todayOrders": orders, "totalRevenue": revenue, "recentOrders": recent})
 }
 
 type adjustmentInput struct {
