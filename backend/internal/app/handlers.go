@@ -291,9 +291,9 @@ func (a *API) listProducts(c *gin.Context) {
 		}
 	}
 	if c.Query("stock") == "out" {
-		q = q.Joins("JOIN product_variants ON product_variants.product_id = products.id").Where("product_variants.quantity = 0").Group("products.id")
+		q = q.Where("EXISTS (SELECT 1 FROM variants WHERE variants.product_id = products.id AND variants.tenant_id = ? AND variants.quantity = 0)", t)
 	} else if c.Query("stock") == "low" {
-		q = q.Joins("JOIN product_variants ON product_variants.product_id = products.id").Where("product_variants.quantity > 0 AND product_variants.quantity < 5").Group("products.id")
+		q = q.Where("EXISTS (SELECT 1 FROM variants WHERE variants.product_id = products.id AND variants.tenant_id = ? AND variants.quantity < ?)", t, 5)
 	}
 	var items []Product
 	var count int64
